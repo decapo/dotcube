@@ -14,6 +14,8 @@ struct Model {
     angle_y: f32,
     ui: Egui,
     z_start: f32,
+    rot_speed_x: f32,
+    rot_speed_y: f32,
 }
 
 fn main() {
@@ -33,7 +35,7 @@ fn model(app: &App) -> Model {
 
     let ui_window = app
         .new_window()
-        .size(300, 100)
+        .size(300, 200)
         .view(ui_view)
         .raw_event(raw_ui_event)
         .build()
@@ -47,13 +49,15 @@ fn model(app: &App) -> Model {
         angle_y: 0.0,
         ui,
         z_start: 0.4,
+        rot_speed_x: 0.25 * PI,
+        rot_speed_y: 0.25 * PI,
     }
 }
 
 fn update(_app: &App, model: &mut Model, update: Update) {
     update_ui(model);
-    model.angle_x += 0.25 * PI * update.since_last.as_secs_f32();
-    model.angle_y += 0.25 * PI * update.since_last.as_secs_f32();
+    model.angle_x += model.rot_speed_x * update.since_last.as_secs_f32();
+    model.angle_y += model.rot_speed_y * update.since_last.as_secs_f32();
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -136,7 +140,14 @@ fn update_ui(model: &mut Model) {
     egui::Window::new("Control Panel")
         .collapsible(false)
         .show(&ctx, |ui| {
-            ui.add(egui::Slider::new(&mut model.z_start, 0.0..=1.0).text("Distance"));
+            ui.add(egui::Slider::new(&mut model.z_start, 0.0..=1.0).text("Z Start"));
+            ui.add(
+                egui::Slider::new(&mut model.rot_speed_x, -2.0 * PI..=2.0 * PI)
+                    .text("Rotation Speed X"),
+            );
+            ui.add(
+                egui::Slider::new(&mut model.rot_speed_y, -2.0 * PI..=2.0 * PI)
+                    .text("Rotation Speed Y"),
+            );
         });
 }
-
