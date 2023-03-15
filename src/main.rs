@@ -140,7 +140,7 @@ fn update_ui(model: &mut Model) {
     egui::Window::new("Control Panel")
         .collapsible(false)
         .show(&ctx, |ui| {
-            ui.add(egui::Slider::new(&mut model.z_start, 0.0..=1.0).text("Z Start"));
+            ui.add(egui::Slider::new(&mut model.z_start, 0.0..=1.0).text("Distance"));
             ui.add(
                 egui::Slider::new(&mut model.rot_speed_x, -2.0 * PI..=2.0 * PI)
                     .text("Rotation Speed X"),
