@@ -7,14 +7,18 @@ const GRID_COUNT: usize = 10;
 const GRID_PAD: f32 = 0.5 / (GRID_COUNT as f32);
 const GRID_SIZE: f32 = ((GRID_COUNT - 1) as f32) * GRID_PAD;
 const CIRCLE_RADIUS: f32 = 5.0;
-const Z_START: f32 = 0.25;
+const Z_START: f32 = 0.50;
 
 struct Model {
-    angle: f32,
+    angle_x: f32,
+    angle_y: f32,
 }
 
 fn main() {
-    nannou::app(model).update(update).run();
+    nannou::app(model)
+        .update(update)
+        .loop_mode(LoopMode::refresh_sync())
+        .run();
 }
 
 fn model(app: &App) -> Model {
@@ -25,11 +29,15 @@ fn model(app: &App) -> Model {
         .build()
         .unwrap();
 
-    Model { angle: 0.0 }
+    Model {
+        angle_x: 0.0,
+        angle_y: 0.0,
+    }
 }
 
 fn update(_app: &App, model: &mut Model, update: Update) {
-    model.angle += 0.25 * PI * update.since_last.as_secs_f32();
+    model.angle_x += 0.25 * PI * update.since_last.as_secs_f32();
+    model.angle_y += 0.25 * PI * update.since_last.as_secs_f32();
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -50,16 +58,31 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 let z = Z_START + (iz as f32) * GRID_PAD;
 
                 let cx = 0.0;
+                let cy = 0.0;
                 let cz = Z_START + GRID_SIZE / 2.0;
 
+                // X-axis rotation
+                let dy = y - cy;
+                let dz = z - cz;
+
+                let a_x = dz.atan2(dy);
+                let m_x = (dy * dy + dz * dz).sqrt();
+
+                let dy = (a_x + model.angle_x).cos() * m_x;
+                let dz = (a_x + model.angle_x).sin() * m_x;
+
+                let y = dy + cy;
+                let z = dz + cz;
+
+                // Y-axis rotation
                 let dx = x - cx;
                 let dz = z - cz;
 
-                let a = dz.atan2(dx);
-                let m = (dx * dx + dz * dz).sqrt();
+                let a_y = dz.atan2(dx);
+                let m_y = (dx * dx + dz * dz).sqrt();
 
-                let dx = (a + model.angle).cos() * m;
-                let dz = (a + model.angle).sin() * m;
+                let dx = (a_y + model.angle_y).cos() * m_y;
+                let dz = (a_y + model.angle_y).sin() * m_y;
 
                 let x = dx + cx;
                 let z = dz + cz;
@@ -71,7 +94,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 let g = (iy * 255) / GRID_COUNT;
                 let b = (iz * 255) / GRID_COUNT;
                 let color = srgba(r as u8, g as u8, b as u8, 255);
-
                 draw.ellipse()
                     .x_y(
                         (x + 1.0) / 2.0 * WIDTH as f32 - WIDTH as f32 / 2.0,
