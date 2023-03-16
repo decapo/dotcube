@@ -1,5 +1,7 @@
 use nannou::prelude::*;
+
 use nannou_egui::{self, egui, Egui};
+use rayon::prelude::*;
 
 const WIDTH: u32 = 960;
 const HEIGHT: u32 = 720;
@@ -70,60 +72,72 @@ fn view(app: &App, model: &Model, frame: Frame) {
         ((BACKGROUND_COLOR >> 24) & 0xFF) as u8,
     ));
 
-    for ix in 0..GRID_COUNT {
-        for iy in 0..GRID_COUNT {
-            for iz in 0..GRID_COUNT {
-                let x = (ix as f32) * GRID_PAD - GRID_SIZE / 2.0;
-                let y = (iy as f32) * GRID_PAD - GRID_SIZE / 2.0;
-                let z = model.z_start + (iz as f32) * GRID_PAD;
+    let angle_x = model.angle_x;
+    let angle_y = model.angle_y;
+    let z_start = model.z_start;
 
-                let cx = 0.0;
-                let cy = 0.0;
-                let cz = model.z_start + GRID_SIZE / 2.0;
+    let cx = 0.0;
+    let cy = 0.0;
+    let cz = z_start + GRID_SIZE / 2.0;
 
-                // X-axis rotation
-                let dy = y - cy;
-                let dz = z - cz;
+    let coordinates: Vec<(f32, f32, f32, Srgba)> = (0..GRID_COUNT)
+        .into_par_iter()
+        .flat_map(move |ix| {
+            (0..GRID_COUNT).into_par_iter().flat_map(move |iy| {
+                (0..GRID_COUNT).into_par_iter().map(move |iz| {
+                    let x = (ix as f32) * GRID_PAD - GRID_SIZE / 2.0;
+                    let y = (iy as f32) * GRID_PAD - GRID_SIZE / 2.0;
+                    let z = z_start + (iz as f32) * GRID_PAD;
+                    // X-axis rotation
+                    let dy = y - cy;
+                    let dz = z - cz;
 
-                let a_x = dz.atan2(dy);
-                let m_x = (dy * dy + dz * dz).sqrt();
+                    let a_x = dz.atan2(dy);
+                    let m_x = (dy * dy + dz * dz).sqrt();
 
-                let dy = (a_x + model.angle_x).cos() * m_x;
-                let dz = (a_x + model.angle_x).sin() * m_x;
+                    let dy = (a_x + angle_x).cos() * m_x;
+                    let dz = (a_x + angle_x).sin() * m_x;
 
-                let y = dy + cy;
-                let z = dz + cz;
+                    let y = dy + cy;
+                    let z = dz + cz;
 
-                // Y-axis rotation
-                let dx = x - cx;
-                let dz = z - cz;
+                    // Y-axis rotation
+                    let dx = x - cx;
+                    let dz = z - cz;
 
-                let a_y = dz.atan2(dx);
-                let m_y = (dx * dx + dz * dz).sqrt();
+                    let a_y = dz.atan2(dx);
+                    let m_y = (dx * dx + dz * dz).sqrt();
 
-                let dx = (a_y + model.angle_y).cos() * m_y;
-                let dz = (a_y + model.angle_y).sin() * m_y;
+                    let dx = (a_y + angle_y).cos() * m_y;
+                    let dz = (a_y + angle_y).sin() * m_y;
 
-                let x = dx + cx;
-                let z = dz + cz;
+                    let x = dx + cx;
+                    let z = dz + cz;
 
-                let x = x / z;
-                let y = y / z;
+                    let x = x / z;
+                    let y = y / z;
 
-                let r = (ix * 255) / GRID_COUNT;
-                let g = (iy * 255) / GRID_COUNT;
-                let b = (iz * 255) / GRID_COUNT;
-                let color = srgba(r as u8, g as u8, b as u8, 255);
-                draw.ellipse()
-                    .x_y(
-                        (x + 1.0) / 2.0 * WIDTH as f32 - WIDTH as f32 / 2.0,
-                        (y + 1.0) / 2.0 * HEIGHT as f32 - HEIGHT as f32 / 2.0,
-                    )
-                    .radius(CIRCLE_RADIUS)
-                    .color(color);
-            }
-        }
+                    let r = (ix * 255) / GRID_COUNT;
+                    let g = (iy * 255) / GRID_COUNT;
+                    let b = (iz * 255) / GRID_COUNT;
+                    let color = srgba(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0);
+
+                    (x, y, z, color)
+                })
+            })
+        })
+        .collect();
+
+    for (x, y, _z, color) in coordinates {
+        draw.ellipse()
+            .x_y(
+                (x + 1.0) / 2.0 * WIDTH as f32 - WIDTH as f32 / 2.0,
+                (y + 1.0) / 2.0 * HEIGHT as f32 - HEIGHT as f32 / 2.0,
+            )
+            .radius(CIRCLE_RADIUS)
+            .color(color);
     }
+
     draw.to_frame(app, &frame).unwrap();
 }
 
